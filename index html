@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dólar Canopus</title>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Arial}
+body{background:#f0f4f0}
+.capa{background:#2d5a27;color:white;padding:30px 20px;text-align:center;border-radius:0 0 30px 30px}
+.capa h1{font-size:32px}
+.capa p{opacity:0.9;margin-top:5px}
+.saldo{background:white;margin:-20px 20px 20px;padding:20px;border-radius:20px;box-shadow:0 5px 20px rgba(0,0,0,0.1);text-align:center}
+.saldo h2{color:#2d5a27;font-size:36px}
+.botoes{padding:20px;display:grid;gap:15px}
+.btn{padding:20px;border-radius:15px;border:none;font-size:18px;font-weight:bold;cursor:pointer}
+.btn-verde{background:#2d5a27;color:white}
+.btn-azul{background:#1a73e8;color:white}
+.btn-branco{background:white;color:#2d5a27;border:2px solid #2d5a27}
+.info{margin:20px;background:white;padding:15px;border-radius:15px;text-align:center;font-size:14px;color:#666}
+#qrcode{display:flex;justify-content:center;padding:20px}
+</style>
+</head>
+<body>
+<div class="capa">
+<h1>💵 DÓLAR CANOPUS</h1>
+<p>Moeda Digital da Vila Canopus</p>
+<p style="margin-top:10px;font-weight:bold">1 C$ = R$ 5,00</p>
+</div>
+<div class="saldo">
+<p>Seu Saldo</p>
+<h2 id="saldo">C$ 0,00</h2>
+</div>
+<div class="botoes">
+<button class="btn btn-verde" onclick="comprar()">💰 COMPRAR DÓLAR CANOPUS (PIX)</button>
+<button class="btn btn-azul" onclick="abrirPagar()">📱 PAGAR COM QR CODE (Sem PIX)</button>
+<button class="btn btn-branco" onclick="abrirMeuQR()">🔳 MEU QR CODE PARA RECEBER</button>
+</div>
+<div class="info">
+✅ Pagar no comércio é sem PIX, sem CPF, só C$<br>
+✅ Comprar C$ é no link oficial da Delmirene<br>
+🔗 link.mercadopago.com.br/dolarcanopus
+</div>
+<div id="modalQR" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:white;z-index:99;text-align:center;padding:30px">
+<h2>Seu QR Code</h2>
+<div id="qrcode"></div>
+<p id="meuId" style="margin-top:15px;font-weight:bold"></p>
+<p>Mostre para quem vai te pagar em C$</p>
+<button class="btn btn-branco" style="margin-top:20px" onclick="fechar()">Fechar</button>
+</div>
+<div id="modalPagar" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:white;z-index:99;padding:20px">
+<h2>Pagar com QR Code</h2>
+<div id="reader" style="margin-top:20px"></div>
+<input id="valorPagar" type="number" placeholder="Valor em C$" style="width:100%;padding:15px;margin-top:15px;border-radius:10px;border:1px solid #ccc">
+<button class="btn btn-azul" style="width:100%;margin-top:15px" onclick="confirmarPagamento()">Enviar C$</button>
+<button class="btn btn-branco" style="width:100%;margin-top:10px" onclick="fechar()">Cancelar</button>
+</div>
+<script>
+let saldo = parseFloat(localStorage.getItem('saldoCanopus') || '0');
+let meuId = localStorage.getItem('idCanopus') || 'CANOPUS-'+Math.floor(Math.random()*90000+10000);
+localStorage.setItem('idCanopus', meuId);
+let totalEmitido = parseFloat(localStorage.getItem('totalEmitido') || '0');
+const LIMITE = 50000000;
+const VALOR_REAL = 5;
+document.getElementById('saldo').innerText = 'C$ ' + saldo.toFixed(2);
+document.getElementById('meuId').innerText = meuId;
+function comprar(){
+ let qtd = prompt('Quantos C$ quer comprar? (1 C$ = R$ 5,00)');
+ if(!qtd) return;
+ if(totalEmitido + parseFloat(qtd) > LIMITE){ alert('Limite atingido!'); return; }
+ let valorReais = parseFloat(qtd) * VALOR_REAL;
+ alert('Você vai pagar R$ ' + valorReais.toFixed(2) + ' no PIX');
+ window.open('https://link.mercadopago.com.br/dolarcanopus', '_blank');
+ let novo = confirm('Já pagou? Clique OK para creditar C$ ' + qtd);
+ if(novo){
+   saldo += parseFloat(qtd);
+   totalEmitido += parseFloat(qtd);
+   localStorage.setItem('saldoCanopus', saldo);
+   localStorage.setItem('totalEmitido', totalEmitido);
+   location.reload();
+ }
+}
+function abrirMeuQR(){
+ document.getElementById('modalQR').style.display='block';
+ document.getElementById('qrcode').innerHTML='';
+ new QRCode(document.getElementById('qrcode'), {text: meuId, width:250, height:250, colorDark:"#2d5a27"});
+}
+function abrirPagar(){
+ document.getElementById('modalPagar').style.display='block';
+ let html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+ html5QrcodeScanner.render((decodedText)=>{ 
+   window.destino = decodedText;
+   alert('QR lido: '+decodedText);
+   html5QrcodeScanner.clear();
+ });
+}
+function confirmarPagamento(){
+ let valor = parseFloat(document.getElementById('valorPagar').value);
+ if(valor > saldo){ alert('Saldo insuficiente!'); return; }
+ if(!valor || valor<=0){ alert('Digite valor!'); return; }
+ saldo -= valor;
+ localStorage.setItem('saldoCanopus', saldo);
+ alert('Enviou C$ '+valor+' para '+ (window.destino||'comércio')+' com sucesso! (Sem PIX)');
+ location.reload();
+}
+function fechar(){
+ document.getElementById('modalQR').style.display='none';
+ document.getElementById('modalPagar').style.display='none';
+}
+</script>
+</body>
+</html>
